@@ -17,28 +17,22 @@ interface Product{
 
 const database:Product[] = []
 //app.register(require())
-app.get('/',(req,res)=>{
-    res.send("hellloo")
-})
 
-//Create Product - POST
+//Create Product - POST method
 app.post('/product/create',(req,res)=>{
     let data:Product = req.body as Product
     console.log(data)
     database.push(data)
     res.send("Product created successfully")
 })
-//Create Product - GET
+//Create Product - GET method
 app.get('/product/create',(req,res)=>{
-    
     res.send(database)
     
 })
+
 
 app.listen({port:4000},(err)=>{
     if (err) throw err
     console.log("server is listening....")
 })
-
-
-
