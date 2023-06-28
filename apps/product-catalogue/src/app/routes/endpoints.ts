@@ -1,12 +1,12 @@
 import fastify from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
 import { Client } from 'pg';
+import validation from './validation_main';
 const app = fastify();
 
+//Database connection
 const connectionString = 'postgres://postgres:12345@localhost/billing';
 const client = new Client(connectionString);
-
-//Database connection
 
 async function start(){
     try{
@@ -38,60 +38,15 @@ const database: Product[] = [];
 
 function _validateCreateProductInput(data: Omit<Product, 'id'>) {
   //Mandatory param validation.
-  const missingParams = [];
-  const mandatoryParams = [
-    'merchantId',
-    'productCatalogueId',
-    'name',
-    'price',
-    'tax',
-  ];
-  mandatoryParams.forEach((mandatoryParam) => {
-    const incomingKeys = Object.keys(data);
-    if (!incomingKeys.includes(mandatoryParam)) {
-      missingParams.push(mandatoryParam);
-    }
-  });
-  if (missingParams.length) {
-    throw new Error(`Mandatory params missing. ${missingParams.join(',')}`);
-  }
-
-  //Type validation.
-  if (
-    typeof data.merchantId !== 'string' ||
-    typeof data.productCatalogueId !== 'string' ||
-    typeof data.name !== 'string' ||
-    typeof data.tax !== 'number' ||
-    typeof data.price !== 'number'
-  ) {
-    throw new Error(`Invalid type.`);
-  }
-
-  if (data.description && typeof data.description !== 'string')
-    throw new Error(`Invalid description type.`);
-  if (data.brand && typeof data.brand !== 'string')
-    throw new Error(`Invalid brand type.`);
-  if (data.discount && typeof data.discount !== 'number')
-    throw new Error(`Invalid discount type.`);
-
-  //Length validation.
-
-  if (data.name && (data.name.length<3 || data.name.length >30)){
-    throw new Error(`Name length should be between 3 and 30 characters.`)
-  }
-  if (data.description && (data.description.length > 200)){
-    throw new Error(`Description length should be less than 200 characters.`)
-  }
-  if (data.brand && (data.brand.length <3 || data.brand.length >30)){
-    throw new Error(`Brand length should be between 3 and 30 characters.`)
-  }
-  if (data.price<0){
-    throw new Error(`Price should be a positive value.`)
-  }
-  if (data.tax <0){
-    throw new Error(`Tax should be a positive value.`)
-  }
-
+  validation.mandatoryParamCheck(data)
+  validation.merchantId(data.merchantId)
+  validation.productCatalogueId(data.productCatalogueId)
+  validation.name(data.name)
+  validation.price(data.price)
+  validation.tax(data.tax)
+  validation.description(data.description)
+  validation.discount(data.discount)
+  validation.brand(data.brand)
   
 }
 
