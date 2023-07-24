@@ -2,23 +2,13 @@ import fastify from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
 import { Client } from 'pg';
 import validation from './validation_main';
+
 const app = fastify();
 
 //Database connection
 const connectionString = 'postgres://postgres:12345@localhost/billing';
 const client = new Client(connectionString);
 
-async function start(){
-    try{
-        await client.connect()
-        console.log("Database connected")
-    }
-    catch(err){
-        console.log('failed to connect',err)
-    }
-}
-
-start()
 
 interface Product {
   id: string;
@@ -50,34 +40,20 @@ function _validateCreateProductInput(data: Omit<Product, 'id'>) {
   
 }
 
-//Create Product - POST
-app.post('/product/create', async (req, res) => {
-  // Receive request body       
-  const data: Omit<Product, 'id'> = req.body as Omit<Product, 'id'>;
+async function createProduct(req,res) {
 
-  // Validate request body.
   try {
+    const data: Omit<Product, 'id'> = req.body as Omit<Product, 'id'>;
+
     _validateCreateProductInput(data);
-    
-  } catch (err) {
-    console.log(
-      'Errored in create product input validation with message',
-      err.message
-    );
-    res.code(400).send({
-      status: 'ERROR',
-      message: err.message,
-    });
-  }
 
-  const id = `p_${uuidv4()}`;
-  const newProduct = { ...data, id };
+    const id = `p_${uuidv4()}`;
+    const newProduct = { ...data, id };
 
-  //Insertion of data in database
-  try{
-  const query = `insert into listofproducts ( id, merchantid, productcatalogueid, name, price, tax, description, discount, brand)
+    const query = `insert into listofproducts ( id, merchantid, productcatalogueid, name, price, tax, description, discount, brand)
                 values ( $1, $2, $3, $4, $5, $6, $7, $8, $9);`
-  const values = [
+
+    const values = [
     newProduct.id,
     newProduct.merchantId,
     newProduct.productCatalogueId,
@@ -88,49 +64,71 @@ app.post('/product/create', async (req, res) => {
     newProduct.discount || null,
     newProduct.brand || null
   ]
+
   await client.query(query,values)
   database.push(newProduct);
-  res.code(200).send({
+
+  res.status(200).send({
     status: 'SUCCESS',
     data: {
       productId: id,
     },
     message:'Stored in database'
   });
-}
-catch(err){
-        console.log('Insertion of data in db is failed',err)
-        res.code(400).send({
-            status:'Failed',
-            message:'Insertion of data in db is failed'
-        })
+  } 
+  catch (err) {
+    console.log(
+      'Errored in create product input validation with message',
+      err.message
+    );
+    res.status(400).send({
+      status: 'ERROR',
+      message: err.message,
+    });
+  }
 }
 
-});
+
+async function getAllProducts(req,res) {
+  try{
+    const listofproducts = await client.query(`select * from listofproducts`)
+
+    res.status(200).send({
+       status:'SUCCESS',
+       listofproducts
+    });
+  }
+  catch(err){
+    console.log('Error in retrieving',err)
+    res.status(500).send({
+       status:'FAILED',
+       message:"Error in retrieving"
+    })
+  }
+}
+
+
+
+//Create Product - POST
+app.post('/product/create', createProduct)
 
 //Create Product - GET
-app.get('/product/create', async(req, res) => {
+app.get('/product/create', getAllProducts)
 
-    try{
-         const listofproducts = await client.query(`select * from listofproducts`)
 
-         res.code(200).send({
-            status:'SUCCESS',
-            listofproducts
-         });
+const start = async ()=>{
+    try {
+      await client.connect()
+      console.log("Database connected")
+
+      await app.listen({port:4000})
+      console.log("Server is listening...")
     }
-    catch(err){
-        console.log('Error in retrieving',err)
-        res.send({
-            status:'FAILED',
-            message:"Error in retrieving"
-        })
+    catch (err){
+      console.log('Failed to start server',err)
+      process.exit(1)
     }
- 
-}); 
+}
 
-app.listen({ port: 4000 }, (err) => {
-  if (err) throw err;
-  console.log('server is listening....');
-});
-
+start()
+//----------------------------------------------------------------

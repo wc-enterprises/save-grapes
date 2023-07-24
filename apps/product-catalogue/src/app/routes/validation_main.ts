@@ -39,7 +39,7 @@ export const price = (price)=>{
     if(typeof price !=='number')
         throw new Error(`Invalid price type`)
     if(price < 0)
-        throw new Error(`rice should be  positive value.`)
+        throw new Error(`Price should be  positive value.`)
 }
 
 export const description = (description)=>{
@@ -68,26 +68,9 @@ export const name = (name)=>{
         throw new Error(`Name length should be between 3 and 100 characters.`)
 }
 
-export const typeValidationCheck = (data)=>{
-        if( typeof data.merchantId!=='string' ||
-            typeof data.productCatalogueId!=='string' ||
-            typeof data.tax !== 'number' ||
-            typeof data.price !=='number' 
-        ){
-            throw new Error (`Invalid type`)
-        }
-        
-        if (data.description && typeof data.description !== 'string')
-            throw new Error(`Invalid description type.`);
-        if (data.brand && typeof data.brand !== 'string')
-            throw new Error(`Invalid brand type.`);
-        if (data.discount && typeof data.discount !== 'number')
-                throw new Error(`Invalid discount type.`);
-}
 
 const validation ={
     mandatoryParamCheck,
-    typeValidationCheck,
     merchantId,
     productCatalogueId,
     tax,
