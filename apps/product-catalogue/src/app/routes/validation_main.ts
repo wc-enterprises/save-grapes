@@ -64,8 +64,8 @@ export const discount  = (discount)=>{
 export const name = (name)=>{
     if(typeof name!=='string')
         throw new Error(`Invalid type name`)
-    if(name.length<3 || name.length > 30)
-        throw new Error(`Name length should be between 3 and 30 characters.`)
+    if(name.length<3 || name.length > 100)
+        throw new Error(`Name length should be between 3 and 100 characters.`)
 }
 
 export const typeValidationCheck = (data)=>{
