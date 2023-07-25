@@ -1,13 +1,17 @@
 import fastify from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
-import { Client } from 'pg';
+//import { Client } from 'pg';
 import validation from './validation_main';
 
-const app = fastify();
+const app = require('fastify')();
+
+app.register(require('@fastify/postgres'),{
+  connectionString : 'postgres://postgres:12345@localhost/billing'
+})
 
 //Database connection
-const connectionString = 'postgres://postgres:12345@localhost/billing';
-const client = new Client(connectionString);
+//const connectionString = 'postgres://postgres:12345@localhost/billing';
+//const client = new Client(connectionString);
 
 
 interface Product {
@@ -65,7 +69,8 @@ async function createProduct(req,res) {
     newProduct.brand || null
   ]
 
-  await client.query(query,values)
+  await app.pg.query(query,values)
+  //await client.query(query,values)
   database.push(newProduct);
 
   res.status(200).send({
@@ -91,11 +96,11 @@ async function createProduct(req,res) {
 
 async function getAllProducts(req,res) {
   try{
-    const listofproducts = await client.query(`select * from listofproducts`)
+    //const listofproducts = await client.query(`select * from listofproducts`)
 
     res.status(200).send({
        status:'SUCCESS',
-       listofproducts
+      // listofproducts
     });
   }
   catch(err){
@@ -109,7 +114,7 @@ async function getAllProducts(req,res) {
 
 
 
-//Create Product - POST
+//Create Product - POST   
 app.post('/product/create', createProduct)
 
 //Create Product - GET
@@ -118,10 +123,9 @@ app.get('/product/create', getAllProducts)
 
 const start = async ()=>{
     try {
-      await client.connect()
+      //await client.connect()
       console.log("Database connected")
-
-      await app.listen({port:4000})
+      app.listen({port:4000})
       console.log("Server is listening...")
     }
     catch (err){

@@ -4,7 +4,6 @@ export const mandatoryParamCheck = (data)=>{
     const mandatoryParam = [
         'merchantId',
         'productCatalogueId',
-    
         'price',
         'tax',
     ]
