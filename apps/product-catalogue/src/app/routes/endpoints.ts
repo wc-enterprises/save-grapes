@@ -1,17 +1,13 @@
-import fastify from 'fastify';
+//import Fastify from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
-//import { Client } from 'pg';
 import validation from './validation_main';
 
 const app = require('fastify')();
+//const app = Fastify();
 
 app.register(require('@fastify/postgres'),{
   connectionString : 'postgres://postgres:12345@localhost/billing'
 })
-
-//Database connection
-//const connectionString = 'postgres://postgres:12345@localhost/billing';
-//const client = new Client(connectionString);
 
 
 interface Product {
@@ -40,8 +36,7 @@ function _validateCreateProductInput(data: Omit<Product, 'id'>) {
   validation.tax(data.tax)
   validation.description(data.description)
   validation.discount(data.discount)
-  validation.brand(data.brand)
-  
+  validation.brand(data.brand) 
 }
 
 async function createProduct(req,res) {
@@ -70,7 +65,6 @@ async function createProduct(req,res) {
   ]
 
   await app.pg.query(query,values)
-  //await client.query(query,values)
   database.push(newProduct);
 
   res.status(200).send({
@@ -78,7 +72,7 @@ async function createProduct(req,res) {
     data: {
       productId: id,
     },
-    message:'Stored in database'
+    message:'Successfully stored in database'
   });
   } 
   catch (err) {
@@ -87,8 +81,8 @@ async function createProduct(req,res) {
       err.message
     );
     res.status(400).send({
-      status: 'ERROR',
-      message: err.message,
+       status: 'ERROR',
+       message: err.message,
     });
   }
 }
@@ -96,11 +90,12 @@ async function createProduct(req,res) {
 
 async function getAllProducts(req,res) {
   try{
-    //const listofproducts = await client.query(`select * from listofproducts`)
+    const listofproducts = await app.pg.query(`select * from listofproducts;`)
+    const result = listofproducts.rows
 
     res.status(200).send({
        status:'SUCCESS',
-      // listofproducts
+       listofproducts:result
     });
   }
   catch(err){
@@ -112,20 +107,72 @@ async function getAllProducts(req,res) {
   }
 }
 
+async function updateProduct(req,res) {
+  try{
+    const product_id = req.params.id
 
+    const { 
+      merchantId,
+      productCatalogueId,
+      name,
+      price,
+      tax,
+      description,
+      discount,
+      brand
+    } = req.body
 
-//Create Product - POST   
+    const values = [merchantId,productCatalogueId,name,price,tax,description,discount,brand,product_id]
+    await app.pg.query(`update listofproducts
+                        set merchantId = $1,productCatalogueId = $2,name = $3,price = $4,tax = $5,description = $6,discount = $7,brand = $8
+                        where id = $9;`
+                        ,values)
+
+    res.status(200).send({
+      status:'Successfully updated'
+    })
+  }
+  catch(err){
+    console.log("Failed with message",err.message)
+    res.status(500).send({
+      status:'FAILED'
+    })
+  }
+}
+
+async function deleteProduct(req,res) {
+  try{
+  const product_Id = req.params.id
+  await app.pg.query(`delete from listofproducts where id = $1;`,[product_Id])
+
+  res.status(200).send({
+    status:"Successfully deleted"
+  })
+  }
+  catch(err){
+    console.log("Failed with message",err.message)
+    res.status(500).send({
+      status:"Failed"
+    })
+  }
+}
+
+//Create Product - POST METHOD 
 app.post('/product/create', createProduct)
 
-//Create Product - GET
+//Create Product - GET METHOD
 app.get('/product/create', getAllProducts)
 
+//PUT METHOD 
+app.put('/product/update/:id', updateProduct )
+
+// DELETE METHOD
+app.delete('/product/delete/:id', deleteProduct)
 
 const start = async ()=>{
     try {
-      //await client.connect()
       console.log("Database connected")
-      app.listen({port:4000})
+      await app.listen({port:4000})
       console.log("Server is listening...")
     }
     catch (err){
