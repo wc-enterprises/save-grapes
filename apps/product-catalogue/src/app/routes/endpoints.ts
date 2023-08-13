@@ -1,13 +1,10 @@
-//import Fastify from 'fastify';
+import Fastify from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
 import validation from './validation_main';
-
-const app = require('fastify')();
-//const app = Fastify();
-
-app.register(require('@fastify/postgres'),{
-  connectionString : 'postgres://postgres:12345@localhost/billing'
-})
+import { PrismaClient } from '@prisma/client'
+//const app1 = require('fastify')();
+const app:any = Fastify();
+const prisma = new PrismaClient()
 
 
 interface Product {
@@ -22,21 +19,24 @@ interface Product {
   brand?: string;
 }
 
-const database: Product[] = [];
-
-
 
 function _validateCreateProductInput(data: Omit<Product, 'id'>) {
   //Mandatory param validation.
+  
   validation.mandatoryParamCheck(data)
   validation.merchantId(data.merchantId)
   validation.productCatalogueId(data.productCatalogueId)
-  validation.name(data.name)
+  
   validation.price(data.price)
   validation.tax(data.tax)
-  validation.description(data.description)
-  validation.discount(data.discount)
-  validation.brand(data.brand) 
+  if(data.name)
+    validation.name(data.name)
+  if(data.description)
+    validation.description(data.description)
+  if(data.discount)
+    validation.discount(data.discount)
+  if(data.brand)
+    validation.brand(data.brand) 
 }
 
 async function createProduct(req,res) {
@@ -49,23 +49,20 @@ async function createProduct(req,res) {
     const id = `p_${uuidv4()}`;
     const newProduct = { ...data, id };
 
-    const query = `insert into listofproducts ( id, merchantid, productcatalogueid, name, price, tax, description, discount, brand)
-                values ( $1, $2, $3, $4, $5, $6, $7, $8, $9);`
-
-    const values = [
-    newProduct.id,
-    newProduct.merchantId,
-    newProduct.productCatalogueId,
-    newProduct.name,
-    newProduct.price,
-    newProduct.tax,
-    newProduct.description || null,
-    newProduct.discount || null,
-    newProduct.brand || null
-  ]
-
-  await app.pg.query(query,values)
-  database.push(newProduct);
+  
+   await prisma.listofproducts.create({
+    data: {
+      id: newProduct.id,
+      merchantid: newProduct.merchantId,
+      productcatalogueid: newProduct.productCatalogueId,
+      name: newProduct.name,
+      price: newProduct.price,
+      tax: newProduct.tax,
+      description: newProduct.description || null,
+      discount: newProduct.discount || null,
+      brand: newProduct.brand || null,
+    },
+  });
 
   res.status(200).send({
     status: 'SUCCESS',
@@ -90,8 +87,9 @@ async function createProduct(req,res) {
 
 async function getAllProducts(req,res) {
   try{
-    const listofproducts = await app.pg.query(`select * from listofproducts;`)
-    const result = listofproducts.rows
+    
+    const listofproducts= await prisma .listofproducts.findMany()
+    const result = listofproducts
 
     res.status(200).send({
        status:'SUCCESS',
@@ -121,12 +119,22 @@ async function updateProduct(req,res) {
       discount,
       brand
     } = req.body
-
-    const values = [merchantId,productCatalogueId,name,price,tax,description,discount,brand,product_id]
-    await app.pg.query(`update listofproducts
-                        set merchantId = $1,productCatalogueId = $2,name = $3,price = $4,tax = $5,description = $6,discount = $7,brand = $8
-                        where id = $9;`
-                        ,values)
+                 
+      await prisma.listofproducts.update({
+        where: {
+          id: product_id,
+        },
+        data: {
+          merchantid : merchantId,
+          productcatalogueid : productCatalogueId,
+          name : name,
+          price : price,
+          tax : tax,
+          description: description || null,
+          discount: discount || null,
+          brand: brand || null,
+        },
+      });
 
     res.status(200).send({
       status:'Successfully updated'
@@ -143,7 +151,12 @@ async function updateProduct(req,res) {
 async function deleteProduct(req,res) {
   try{
   const product_Id = req.params.id
-  await app.pg.query(`delete from listofproducts where id = $1;`,[product_Id])
+  
+  await prisma.listofproducts.delete({
+    where: {
+      id: product_Id,
+    },
+  });
 
   res.status(200).send({
     status:"Successfully deleted"
@@ -152,7 +165,7 @@ async function deleteProduct(req,res) {
   catch(err){
     console.log("Failed with message",err.message)
     res.status(500).send({
-      status:"Failed"
+    status:"Failed"
     })
   }
 }
@@ -171,6 +184,7 @@ app.delete('/product/delete/:id', deleteProduct)
 
 const start = async ()=>{
     try {
+    
       console.log("Database connected")
       await app.listen({port:4000})
       console.log("Server is listening...")
